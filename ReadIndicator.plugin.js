@@ -134,12 +134,12 @@ module.exports = (() => {
 								},
 								readedStatusUpdaterLabel: {
 									type: 'TextInput',
-									value: 'Readed',
+									value: 'Read',
 									description: 'Read Status Updater label'
 								},
 								unreadedStatusUpdaterLabel: {
 									type: 'TextInput',
-									value: 'Unreaded',
+									value: 'Unread',
 									description: 'Unread Status Updater label'
 								},
 								renderReadTicks: {
