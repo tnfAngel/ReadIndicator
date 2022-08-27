@@ -9,7 +9,7 @@
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
- * @updateUrl https://github.com/Thread-Development/ReadIndicator/blob/main/ReadIndicator.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Thread-Development/ReadIndicator/main/ReadIndicator.plugin.js
  */
 
 module.exports = (() => {
