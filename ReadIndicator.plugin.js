@@ -132,10 +132,15 @@ module.exports = (() => {
 									description:
 										'View Status Updater message content'
 								},
-								viewStatusUpdaterLabel: {
+								readedStatusUpdaterLabel: {
 									type: 'TextInput',
-									value: '(view updater)',
-									description: 'View Status Updater label'
+									value: 'Readed',
+									description: 'Read Status Updater label'
+								},
+								unreadedStatusUpdaterLabel: {
+									type: 'TextInput',
+									value: 'Unreaded',
+									description: 'Unread Status Updater label'
 								},
 								renderReadTicks: {
 									type: 'Switch',
@@ -778,10 +783,15 @@ module.exports = (() => {
 																				.disCN
 																				.messageedited,
 																		children:
-																			this
-																				.settings
-																				.personalization
-																				.viewStatusUpdaterLabel
+																			view
+																				? this
+																						.settings
+																						.personalization
+																						.readedStatusUpdaterLabel
+																				: this
+																						.settings
+																						.personalization
+																						.unreadedStatusUpdaterLabel
 																	}
 																)
 														}
