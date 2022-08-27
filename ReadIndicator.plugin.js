@@ -289,7 +289,7 @@ module.exports = (() => {
 
 						const thisClass = this;
 
-						const ListComponent = class AssetsList extends BdApi
+						const AssetsListComponent = class AssetsList extends BdApi
 							.React.Component {
 							render() {
 								this.props.entries = this.props.data.map(
