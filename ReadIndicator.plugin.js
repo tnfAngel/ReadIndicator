@@ -3,8 +3,14 @@
  * @author tnfAngel
  * @authorLink https://github.com/Thread-Development
  * @authorId 456361646273593345
- * @version 1.0.1
+ * @version 1.0.2
  * @description Shows a read tick when the destinatary read a message.
+ * @invite 8RNAdpK
+ * @donate https://www.paypal.me/tnfAngelDev
+ * @patreon https://www.patreon.com/MircoWittrien
+ * @website https://github.com/Thread-Development/ReadIndicator/
+ * @source https://github.com/Thread-Development/ReadIndicator/
+ * @updateUrl https://github.com/Thread-Development/ReadIndicator/edit/main/ReadIndicator.plugin.js
  */
 
 module.exports = (() => {
@@ -12,9 +18,9 @@ module.exports = (() => {
 		info: {
 			name: 'ReadIndicator',
 			author: 'tnfAngel',
-			version: '1.0.1',
+			version: '1.0.2',
 			description:
-				'Adds a read badge when the destinatary read a message.'
+				'Shows a read tick when the destinatary read a message.'
 		}
 	};
 
