@@ -7,7 +7,6 @@
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
  * @donate https://www.paypal.me/tnfAngelDev
- * @patreon https://www.patreon.com/MircoWittrien
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
  * @updateUrl https://github.com/Thread-Development/ReadIndicator/edit/main/ReadIndicator.plugin.js
