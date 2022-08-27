@@ -290,7 +290,7 @@ module.exports = (() => {
 
 						const thisClass = this;
 
-						const AssetsListComponent = class AssetsList extends BdApi
+						const ListComponent = class AssetsList extends BdApi
 							.React.Component {
 							render() {
 								this.props.entries = this.props.data.map(
@@ -333,7 +333,7 @@ module.exports = (() => {
 																		BDFDB
 																			.disCN
 																			.discoverycardcover,
-																	src: `https://${thisClass.settings.host.hostname}/assets/${this.props.data}`,
+																	src: `https://${thisClass.settings.host.hostname}/preview/${this.props.data}`,
 																	loading:
 																		'lazy',
 																	onClick:
