@@ -5,7 +5,7 @@
  * @authorId 456361646273593345
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
- * @version 1.0.5
+ * @version 1.0.6
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
@@ -60,20 +60,22 @@ module.exports = (() => {
 				}
 
 				downloadLibrary() {
-					require('request').get(
-						'https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js',
-						(e, r, b) => {
-							if (!e && b && r.statusCode == 200) {
+					fetch(
+						'https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js'
+					)
+						.then(async (res) => {
+							if (res?.ok) {
+								const data = await res.text();
+
 								writeFileSync(
 									require('path').join(
 										BdApi.Plugins.folder,
 										'0BDFDB.plugin.js'
 									),
-									b
+									data
 								);
 								BdApi.showToast(
-									'Finished downloading BDFDB Library',
-									{ type: 'success' }
+									'Finished downloading BDFDB Library'
 								);
 							} else {
 								BdApi.alert(
@@ -81,8 +83,13 @@ module.exports = (() => {
 									'Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library'
 								);
 							}
-						}
-					);
+						})
+						.catch(() =>
+							BdApi.alert(
+								'Error',
+								'Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library'
+							)
+						);
 				}
 
 				load() {
@@ -374,56 +381,49 @@ module.exports = (() => {
 								`${config.info.name}: Checking for plugin updates...`
 							);
 
-							require('request').get(
-								config.info.updateUrl,
-								(err, res, data) => {
-									if (
-										!err &&
-										data &&
-										res.statusCode === 200
-									) {
-										const currentVersion =
-											config.info.version;
+							const res = await fetch(
+								config.info.updateUrl
+							).catch(() => null);
 
-										const remoteVersion = grabVersion(data);
+							if (res?.ok) {
+								const data = await res.text();
 
-										if (currentVersion !== remoteVersion) {
-											console.log(
-												`${config.info.name}: Found update! ${currentVersion} -> ${remoteVersion}`
-											);
+								const currentVersion = config.info.version;
 
-											BdApi.Plugins.disable(
-												config.info.name
-											);
-											writeFileSync(__filename, data);
+								const remoteVersion = grabVersion(data);
 
-											BdApi.Plugins.enable(
-												config.info.name
-											);
+								if (currentVersion !== remoteVersion) {
+									console.log(
+										`${config.info.name}: Found update! ${currentVersion} -> ${remoteVersion}`
+									);
 
-											BdApi.showToast(
-												`Automatically updated ${config.info.name} v${currentVersion} to version ${remoteVersion}.`,
-												{
-													type: 'success',
-													timeout: 20000
-												}
-											);
-										} else {
-											console.log(
-												`${config.info.name}: No updates found`
-											);
+									BdApi.Plugins.disable(config.info.name);
+
+									writeFileSync(__filename, data);
+
+									BdApi.Plugins.enable(config.info.name);
+
+									BdApi.showToast(
+										`Automatically updated ${config.info.name} v${currentVersion} to version ${remoteVersion}.`,
+										{
+											type: 'success',
+											timeout: 20000
 										}
-									} else {
-										BdApi.showToast(
-											`Could not update ${config.info.name} v${currentVersion} to version ${remoteVersion}.`,
-											{
-												type: 'error',
-												timeout: 20000
-											}
-										);
-									}
+									);
+								} else {
+									console.log(
+										`${config.info.name}: No updates found`
+									);
 								}
-							);
+							} else {
+								BdApi.showToast(
+									`${config.info.name}: Could not check for updates!`,
+									{
+										type: 'error',
+										timeout: 20000
+									}
+								);
+							}
 						}
 					}
 
