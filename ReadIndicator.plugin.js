@@ -5,7 +5,7 @@
  * @authorId 456361646273593345
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
- * @version 1.0.6
+ * @version 1.0.7
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
@@ -397,11 +397,7 @@ module.exports = (() => {
 										`${config.info.name}: Found update! ${currentVersion} -> ${remoteVersion}`
 									);
 
-									BdApi.Plugins.disable(config.info.name);
-
 									writeFileSync(__filename, data);
-
-									BdApi.Plugins.enable(config.info.name);
 
 									BdApi.showToast(
 										`Automatically updated ${config.info.name} v${currentVersion} to version ${remoteVersion}.`,
