@@ -5,7 +5,7 @@
  * @authorId 456361646273593345
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
- * @version 1.0.4
+ * @version 1.0.5
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
@@ -397,7 +397,7 @@ module.exports = (() => {
 											);
 											writeFileSync(__filename, data);
 
-											BdApi.Plugins.disable(
+											BdApi.Plugins.enable(
 												config.info.name
 											);
 
