@@ -3,9 +3,9 @@
  * @author tnfAngel
  * @authorLink https://github.com/Thread-Development
  * @authorId 456361646273593345
- * @version 1.0.3
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
+ * @version 1.0.4
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
@@ -13,13 +13,33 @@
  */
 
 module.exports = (() => {
+	const { readFileSync, writeFileSync } = require('fs');
+
+	const grabVersion = (data) => {
+		return data.split('@version')[1].split('\n')[0].trim();
+	};
+
 	const config = {
 		info: {
 			name: 'ReadIndicator',
 			author: 'tnfAngel',
-			version: '1.0.3',
+			version: grabVersion(readFileSync(__filename, 'utf8')),
 			description:
-				'Shows a read tick when the destinatary read a message.'
+				'Shows a read tick when the destinatary read a message.',
+			updateUrl:
+				'https://raw.githubusercontent.com/Thread-Development/ReadIndicator/main/ReadIndicator.plugin.js'
+		},
+		changeLog: {
+			added: {
+				'Custom URL asset in Send View Updater Menu':
+					'Now you can send custom images/gif/videos to the target',
+				'Auto updater':
+					'An automatic updater has been added to update to the latest version of the plugin on each start, it can be disabled from settings'
+			},
+			fixed: {
+				'Websocket bug':
+					'Fixed a bug that caused the websocket connection to continue to be established even though the plugin was disabled'
+			}
 		}
 	};
 
@@ -43,24 +63,24 @@ module.exports = (() => {
 					require('request').get(
 						'https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js',
 						(e, r, b) => {
-							if (!e && b && r.statusCode == 200)
-								require('fs').writeFile(
+							if (!e && b && r.statusCode == 200) {
+								writeFileSync(
 									require('path').join(
 										BdApi.Plugins.folder,
 										'0BDFDB.plugin.js'
 									),
-									b,
-									(_) =>
-										BdApi.showToast(
-											'Finished downloading BDFDB Library',
-											{ type: 'success' }
-										)
+									b
 								);
-							else
+								BdApi.showToast(
+									'Finished downloading BDFDB Library',
+									{ type: 'success' }
+								);
+							} else {
 								BdApi.alert(
 									'Error',
 									'Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library'
 								);
+							}
 						}
 					);
 				}
@@ -119,6 +139,9 @@ module.exports = (() => {
 				const TextInput = BdApi.Webpack.getModule(
 					BdApi.Webpack.Filters.byDisplayName('TextInput')
 				);
+				const LegacyText = BdApi.Webpack.getModule(
+					BdApi.Webpack.Filters.byDisplayName('LegacyText')
+				);
 				const ConfirmationModal = BdApi.Webpack.getModule(
 					BdApi.Webpack.Filters.byDisplayName('ConfirmModal')
 				);
@@ -147,10 +170,23 @@ module.exports = (() => {
 				return class ReadIndicator extends Plugin {
 					onLoad() {
 						this.defaults = {
-							host: {
+							general: {
 								hostname: {
+									type: 'TextInput',
 									value: 'imgri.cf',
 									description: 'Hostname'
+								},
+								automaticUpdates: {
+									type: 'Switch',
+									value: true,
+									description:
+										'Automatically check and install plugin updates'
+								},
+								blockUpdatersSentByOthers: {
+									type: 'Switch',
+									value: false,
+									description:
+										'Block updaters sent by others (same hostname)'
 								}
 							},
 							personalization: {
@@ -209,12 +245,6 @@ module.exports = (() => {
 									type: 'TextInput',
 									value: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17',
 									description: 'Unread tick SVG Data'
-								},
-								blockUpdatersSentByOthers: {
-									type: 'Switch',
-									value: false,
-									description:
-										'Block updaters sent by others (same hostname)'
 								}
 							},
 							notifications: {
@@ -228,8 +258,6 @@ module.exports = (() => {
 
 						this.patchedModules = {
 							before: {
-								Message: 'default',
-								MessageContent: 'type',
 								SimpleMessageAccessories: 'default'
 							},
 							after: {
@@ -243,7 +271,7 @@ module.exports = (() => {
 
 					setupSocket() {
 						this.socket = new WebSocket(
-							`wss://${this.settings.host.hostname}`
+							`wss://${this.settings.general.hostname}`
 						);
 
 						this.socket.onopen = () => {
@@ -251,13 +279,13 @@ module.exports = (() => {
 								JSON.stringify({
 									userToken: BDFDB.DataUtils.load(
 										config.info.name,
-										`hosts.${this.settings.host.hostname}.userToken`
+										`hosts.${this.settings.general.hostname}.userToken`
 									)
 								})
 							);
 
 							console.log(
-								'Connected to read indicator websocket.'
+								`${config.info.name}: Connected to read indicator websocket.`
 							);
 						};
 
@@ -281,10 +309,17 @@ module.exports = (() => {
 						this.socket.onclose = (evt) => {
 							if (evt.wasClean) {
 								console.log(
-									'Disconnected from read indicator websocket.'
+									`${config.info.name}: Disconnected from read indicator websocket. (Clean)`
 								);
-							} else if (evt.reason !== 'DESTROY') {
-								console.warn('Disconnect', evt);
+							} else if (evt.reason === 'DESTROY') {
+								console.log(
+									`${config.info.name}: Websocket connection destroyed.`
+								);
+							} else {
+								console.warn(
+									`${config.info.name}: Websocket connection closed. Retrying in 5 seconds...`,
+									evt
+								);
 
 								this.reconnectTimeout = setTimeout(
 									() => this.setupSocket(),
@@ -309,9 +344,11 @@ module.exports = (() => {
 					async onStart() {
 						this.forceUpdateAll();
 
+						await this.checkForPluginUpdates();
+
 						const savedUpdaters = BDFDB.DataUtils.load(
 							config.info.name,
-							`hosts.${this.settings.host.hostname}.updaters`
+							`hosts.${this.settings.general.hostname}.updaters`
 						);
 
 						this.updatersCache = Array.isArray(savedUpdaters)
@@ -322,211 +359,71 @@ module.exports = (() => {
 							BDFDB.DataUtils.save(
 								this.updatersCache,
 								config.info.name,
-								`hosts.${this.settings.host.hostname}.updaters`
+								`hosts.${this.settings.general.hostname}.updaters`
 							);
 						}, 5000);
 
-						const thisClass = this;
-
-						const sendViewUpdaterIcon = `<svg name="Send View Updater" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/><extra/></svg>`;
-
-						this.SendViewUpdaterButtonComponent = class SendViewUpdaterButton extends (
-							BDFDB.ReactUtils.Component
-						) {
-							render() {
-								return BDFDB.ReactUtils.createElement(
-									BDFDB.LibraryComponents
-										.ChannelTextAreaButton,
-									{
-										className:
-											BDFDB.DOMUtils.formatClassName(
-												BDFDB.disCN.textareapickerbutton
-											),
-										iconSVG: sendViewUpdaterIcon,
-										nativeClass: true,
-										tooltip: {
-											text: () =>
-												'Send View Status Updater',
-											tooltipConfig: {
-												style: 'max-width: 400px'
-											}
-										},
-										onClick: async () => {
-											const assets =
-												await thisClass.getAPIAssets();
-
-											if (!assets)
-												return BdApi.showToast(
-													'An error ocurred while getting API Assets.',
-													{
-														type: 'error'
-													}
-												);
-
-											Modal.openModal((props) => {
-												if (props.transitionState === 3)
-													return null;
-
-												return BDFDB.ReactUtils.createElement(
-													ConfirmationModal,
-													Object.assign(props, {
-														header: [
-															'Send View Status Updater',
-															BDFDB.ReactUtils.createElement(
-																'div',
-																{
-																	className:
-																		'divider-1wtgZ3',
-																	width: '2000px'
-																}
-															),
-															BDFDB.ReactUtils.createElement(
-																BDFDB.ReactUtils.memo(
-																	() => {
-																		const [
-																			value,
-																			setValue
-																		] = BDFDB.ReactUtils.useState(
-																			thisClass.asset ??
-																				''
-																		);
-
-																		return BDFDB.ReactUtils.createElement(
-																			TextInput,
-																			{
-																				value: value,
-																				placeholder:
-																					'https://asset.link/example.gif',
-																				onInput:
-																					({
-																						target
-																					}) => {
-																						setValue(
-																							target.value
-																						);
-
-																						thisClass.asset =
-																							target.value;
-																					}
-																			}
-																		);
-																	}
-																)
-															)
-														],
-														confirmButtonColor:
-															Button.ButtonColors
-																.BRAND,
-														confirmText: 'Send',
-														cancelText: 'Nevermind',
-														onConfirm: () =>
-															thisClass.sendLinkMessage(),
-														children: [
-															BDFDB.ReactUtils.createElement(
-																class AssetsList extends BdApi
-																	.React
-																	.Component {
-																	render() {
-																		this.props.entries =
-																			this.props.data.map(
-																				(
-																					entry
-																				) =>
-																					BDFDB.ReactUtils.createElement(
-																						class AssetCard extends BdApi
-																							.React
-																							.Component {
-																							render() {
-																								return BDFDB.ReactUtils.createElement(
-																									'div',
-																									{
-																										className:
-																											BDFDB
-																												.disCN
-																												.discoverycard,
-																										children:
-																											[
-																												BDFDB.ReactUtils.createElement(
-																													'div',
-																													{
-																														className:
-																															BDFDB
-																																.disCN
-																																.discoverycardheader,
-																														children:
-																															[
-																																BDFDB.ReactUtils.createElement(
-																																	'div',
-																																	{
-																																		children:
-																																			[
-																																				BDFDB.ReactUtils.createElement(
-																																					'img',
-																																					{
-																																						className:
-																																							BDFDB
-																																								.disCN
-																																								.discoverycardcover,
-																																						src: `https://${thisClass.settings.host.hostname}/preview/${this.props.data}`,
-																																						loading:
-																																							'lazy',
-																																						onClick:
-																																							() => {
-																																								Modal.closeAllModals();
-																																								thisClass.asset =
-																																									this.props.data;
-																																								thisClass.sendLinkMessage();
-																																							}
-																																					}
-																																				)
-																																			]
-																																	}
-																																)
-																															]
-																													}
-																												)
-																											]
-																									}
-																								);
-																							}
-																						},
-																						{
-																							data: entry
-																						}
-																					)
-																			);
-
-																		return BDFDB.ReactUtils.createElement(
-																			'div',
-																			{
-																				className:
-																					BDFDB
-																						.disCN
-																						.discoverycards,
-																				children:
-																					this
-																						.props
-																						.entries
-																			}
-																		);
-																	}
-																},
-																{
-																	data: assets
-																}
-															)
-														]
-													})
-												);
-											});
-										}
-									}
-								);
-							}
-						};
-
 						if (await this.checkAPI()) {
 							await this.registerAPI();
+						}
+					}
+
+					async checkForPluginUpdates() {
+						if (this.settings.general.automaticUpdates) {
+							console.log(
+								`${config.info.name}: Checking for plugin updates...`
+							);
+
+							require('request').get(
+								config.info.updateUrl,
+								(err, res, data) => {
+									if (
+										!err &&
+										data &&
+										res.statusCode === 200
+									) {
+										const currentVersion =
+											config.info.version;
+
+										const remoteVersion = grabVersion(data);
+
+										if (currentVersion !== remoteVersion) {
+											console.log(
+												`${config.info.name}: Found update! ${currentVersion} -> ${remoteVersion}`
+											);
+
+											BdApi.Plugins.disable(
+												config.info.name
+											);
+											writeFileSync(__filename, data);
+
+											BdApi.Plugins.disable(
+												config.info.name
+											);
+
+											BdApi.showToast(
+												`Automatically updated ${config.info.name} v${currentVersion} to version ${remoteVersion}.`,
+												{
+													type: 'success',
+													timeout: 20000
+												}
+											);
+										} else {
+											console.log(
+												`${config.info.name}: No updates found`
+											);
+										}
+									} else {
+										BdApi.showToast(
+											`Could not update ${config.info.name} v${currentVersion} to version ${remoteVersion}.`,
+											{
+												type: 'error',
+												timeout: 20000
+											}
+										);
+									}
+								}
+							);
 						}
 					}
 
@@ -543,9 +440,11 @@ module.exports = (() => {
 
 						const APIUpdater = await this.generateAPIUpdater(asset);
 
-						if (!APIUpdater)
+						if (!APIUpdater) return;
+
+						if (APIUpdater.type === 'error')
 							return BdApi.showToast(
-								'An error ocurred while generating view status updater link.',
+								'Invalid asset provided. Please select a valid asset or a valid asset link (image/gif/video).',
 								{
 									type: 'error'
 								}
@@ -557,7 +456,7 @@ module.exports = (() => {
 								content: `${this.settings.personalization.message
 									.replaceAll(
 										'{{link_hostname}}',
-										this.settings.host.hostname
+										this.settings.general.hostname
 									)
 									.replaceAll(
 										'{{link_id}}',
@@ -641,7 +540,7 @@ module.exports = (() => {
 
 					async checkAPI() {
 						const apiWorking = await fetch(
-							`https://${this.settings.host.hostname}/api/test`
+							`https://${this.settings.general.hostname}/api/test`
 						)
 							.then((res) => res.json())
 							.then(() => true)
@@ -657,7 +556,7 @@ module.exports = (() => {
 
 					async getAPIAssets() {
 						const assets = await fetch(
-							`https://${this.settings.host.hostname}/api/assets`
+							`https://${this.settings.general.hostname}/api/assets`
 						)
 							.then((res) => res.json())
 							.catch(() => null);
@@ -673,7 +572,7 @@ module.exports = (() => {
 					async registerAPI() {
 						const allSubscriptions = BDFDB.DataUtils.load(
 							config.info.name,
-							`hosts.${this.settings.host.hostname}.updaters`
+							`hosts.${this.settings.general.hostname}.updaters`
 						);
 
 						const allSubscriptionsIDs = Object.values(
@@ -683,7 +582,7 @@ module.exports = (() => {
 							.map((data) => data.linkID);
 
 						const result = await fetch(
-							`https://${this.settings.host.hostname}/api/register`,
+							`https://${this.settings.general.hostname}/api/register`,
 							{
 								method: 'POST',
 								headers: {
@@ -693,7 +592,7 @@ module.exports = (() => {
 									subscriptions: allSubscriptionsIDs,
 									userToken: BDFDB.DataUtils.load(
 										config.info.name,
-										`hosts.${this.settings.host.hostname}.userToken`
+										`hosts.${this.settings.general.hostname}.userToken`
 									)
 								})
 							}
@@ -709,7 +608,7 @@ module.exports = (() => {
 						BDFDB.DataUtils.save(
 							result.userToken,
 							config.info.name,
-							`hosts.${this.settings.host.hostname}.userToken`
+							`hosts.${this.settings.general.hostname}.userToken`
 						);
 
 						const subscriptionsKeys = Object.keys(
@@ -743,7 +642,7 @@ module.exports = (() => {
 
 					async generateAPIUpdater(asset) {
 						const result = await fetch(
-							`https://${this.settings.host.hostname}/api/generate`,
+							`https://${this.settings.general.hostname}/api/generate`,
 							{
 								method: 'POST',
 								headers: {
@@ -752,16 +651,14 @@ module.exports = (() => {
 								body: JSON.stringify({
 									userToken: BDFDB.DataUtils.load(
 										config.info.name,
-										`hosts.${this.settings.host.hostname}.userToken`
+										`hosts.${this.settings.general.hostname}.userToken`
 									),
 									asset: asset
 								})
 							}
-						)
-							.then((res) => res.json())
-							.catch(() => null);
+						).catch(() => null);
 
-						if (!result || result.type === 'error') {
+						if (result.status === 401) {
 							const registered = await this.registerAPI();
 
 							if (!registered)
@@ -769,10 +666,10 @@ module.exports = (() => {
 									'Invalid hostname provided: API Returned error or is not responding. The plugin has been stopped.'
 								);
 
-							return false;
+							return generateAPIUpdater(asset);
 						}
 
-						return result;
+						return result.json();
 					}
 
 					showCriticalError(error) {
@@ -797,7 +694,7 @@ module.exports = (() => {
 									CurrentUser.getCurrentUser().id
 								) {
 									const cachedUpdaters =
-										this.updatersCache.filter(
+										this.updatersCache?.filter(
 											(upd) =>
 												upd.channel ===
 												message.channel_id
@@ -974,9 +871,241 @@ module.exports = (() => {
 										.SIDEBAR) &&
 							!e.instance.props.disabled
 						) {
+							const thisClass = this;
+
+							const sendViewUpdaterIcon = `<svg name="Send View Updater" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/><extra/></svg>`;
+
 							e.returnvalue.props.children.unshift(
 								BDFDB.ReactUtils.createElement(
-									this.SendViewUpdaterButtonComponent,
+									class SendViewUpdaterButton extends BDFDB
+										.ReactUtils.Component {
+										render() {
+											return BDFDB.ReactUtils.createElement(
+												BDFDB.LibraryComponents
+													.ChannelTextAreaButton,
+												{
+													className:
+														BDFDB.DOMUtils.formatClassName(
+															BDFDB.disCN
+																.textareapickerbutton
+														),
+													iconSVG:
+														sendViewUpdaterIcon,
+													nativeClass: true,
+													tooltip: {
+														text: () =>
+															'Send View Status Updater',
+														tooltipConfig: {
+															style: 'max-width: 400px'
+														}
+													},
+													onClick: async () => {
+														const assets =
+															await thisClass.getAPIAssets();
+
+														if (!assets)
+															return BdApi.showToast(
+																'An error ocurred while getting API Assets.',
+																{
+																	type: 'error'
+																}
+															);
+
+														Modal.openModal(
+															(props) => {
+																if (
+																	props.transitionState ===
+																	3
+																)
+																	return null;
+
+																return BDFDB.ReactUtils.createElement(
+																	ConfirmationModal,
+																	Object.assign(
+																		props,
+																		{
+																			header: [
+																				'Send View Status Updater',
+																				BDFDB.ReactUtils.createElement(
+																					'div',
+																					{
+																						className:
+																							'divider-1wtgZ3'
+																					}
+																				),
+																				BDFDB.ReactUtils.createElement(
+																					LegacyText,
+																					{
+																						children:
+																							'Asset image/gif/video URL (or select one frome the list above)'
+																					}
+																				),
+																				BDFDB.ReactUtils.createElement(
+																					BDFDB.ReactUtils.memo(
+																						() => {
+																							const [
+																								value,
+																								setValue
+																							] =
+																								BDFDB.ReactUtils.useState(
+																									thisClass.asset ??
+																										''
+																								);
+
+																							return BDFDB.ReactUtils.createElement(
+																								TextInput,
+																								{
+																									value: value,
+																									placeholder:
+																										'https://asset.link/example.gif',
+																									onInput:
+																										({
+																											target
+																										}) => {
+																											setValue(
+																												target.value
+																											);
+
+																											thisClass.asset =
+																												target.value;
+																										}
+																								}
+																							);
+																						}
+																					)
+																				),
+																				BDFDB.ReactUtils.createElement(
+																					'div',
+																					{
+																						className:
+																							'divider-1wtgZ3'
+																					}
+																				),
+																				BDFDB.ReactUtils.createElement(
+																					LegacyText,
+																					{
+																						children:
+																							'Warning: Viewing the chat in other clients without the plugin will count as read and sum a view.'
+																					}
+																				)
+																			],
+																			confirmButtonColor:
+																				Button
+																					.ButtonColors
+																					.BRAND,
+																			confirmText:
+																				'Send',
+																			cancelText:
+																				'Nevermind',
+																			onConfirm:
+																				() =>
+																					thisClass.sendLinkMessage(),
+																			children:
+																				[
+																					BDFDB.ReactUtils.createElement(
+																						class AssetsList extends BdApi
+																							.React
+																							.Component {
+																							render() {
+																								this.props.entries =
+																									this.props.data.map(
+																										(
+																											entry
+																										) =>
+																											BDFDB.ReactUtils.createElement(
+																												class AssetCard extends BdApi
+																													.React
+																													.Component {
+																													render() {
+																														return BDFDB.ReactUtils.createElement(
+																															'div',
+																															{
+																																className:
+																																	BDFDB
+																																		.disCN
+																																		.discoverycard,
+																																children:
+																																	[
+																																		BDFDB.ReactUtils.createElement(
+																																			'div',
+																																			{
+																																				className:
+																																					BDFDB
+																																						.disCN
+																																						.discoverycardheader,
+																																				children:
+																																					[
+																																						BDFDB.ReactUtils.createElement(
+																																							'div',
+																																							{
+																																								children:
+																																									[
+																																										BDFDB.ReactUtils.createElement(
+																																											'img',
+																																											{
+																																												className:
+																																													BDFDB
+																																														.disCN
+																																														.discoverycardcover,
+																																												src: `https://${thisClass.settings.general.hostname}/preview/${this.props.data}`,
+																																												loading:
+																																													'lazy',
+																																												onClick:
+																																													() => {
+																																														Modal.closeAllModals();
+																																														thisClass.asset =
+																																															this.props.data;
+																																														thisClass.sendLinkMessage();
+																																													}
+																																											}
+																																										)
+																																									]
+																																							}
+																																						)
+																																					]
+																																			}
+																																		)
+																																	]
+																															}
+																														);
+																													}
+																												},
+																												{
+																													data: entry
+																												}
+																											)
+																									);
+
+																								return BDFDB.ReactUtils.createElement(
+																									'div',
+																									{
+																										className:
+																											BDFDB
+																												.disCN
+																												.discoverycards,
+																										children:
+																											this
+																												.props
+																												.entries
+																									}
+																								);
+																							}
+																						},
+																						{
+																							data: assets
+																						}
+																					)
+																				]
+																		}
+																	)
+																);
+															}
+														);
+													}
+												}
+											);
+										}
+									},
 									{
 										channelId: e.instance.props.channel.id
 									}
@@ -994,10 +1123,10 @@ module.exports = (() => {
 							if (e.instance.props.message.content) {
 								if (
 									message.content.includes(
-										`https://${this.settings.host.hostname}`
+										`https://${this.settings.general.hostname}`
 									) ||
 									message.content.includes(
-										`http://${this.settings.host.hostname}`
+										`http://${this.settings.general.hostname}`
 									)
 								) {
 									if (
@@ -1033,22 +1162,25 @@ module.exports = (() => {
 								BDFDB.ReactUtils.createElement(
 									BDFDB.LibraryComponents.SettingsPanelList,
 									{
-										title: 'Host',
-										children: [
+										title: 'General',
+										children: Object.entries(
+											this.defaults.general
+										).map(([key, value]) =>
 											BDFDB.ReactUtils.createElement(
 												BDFDB.LibraryComponents
 													.SettingsSaveItem,
 												{
-													type: 'TextInput',
+													type: value.type,
 													plugin: this,
-													keys: ['host', 'hostname'],
-													label: this.defaults.host
-														.hostname.description,
-													value: this.settings.host
-														.hostname
+													keys: ['general', key],
+													label: this.defaults
+														.general[key]
+														.description,
+													value: this.settings
+														.general[key]
 												}
 											)
-										]
+										)
 									}
 								),
 								BDFDB.ReactUtils.createElement(
