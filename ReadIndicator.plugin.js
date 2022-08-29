@@ -5,7 +5,7 @@
  * @authorId 456361646273593345
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
- * @version 1.0.7
+ * @version 1.0.8
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
@@ -31,14 +31,11 @@ module.exports = (() => {
 		},
 		changeLog: {
 			added: {
-				'Custom URL asset in Send View Updater Menu':
-					'Now you can send custom images/gif/videos to the target',
-				'Auto updater':
-					'An automatic updater has been added to update to the latest version of the plugin on each start, it can be disabled from settings'
+				'New option':
+					'Now you can control if you warn to use labels instead of ticks in Status Updater'
 			},
 			fixed: {
-				'Websocket bug':
-					'Fixed a bug that caused the websocket connection to continue to be established even though the plugin was disabled'
+				'Video support': 'Not supported'
 			}
 		}
 	};
@@ -192,8 +189,7 @@ module.exports = (() => {
 								blockUpdatersSentByOthers: {
 									type: 'Switch',
 									value: false,
-									description:
-										'Block updaters sent by others (same hostname)'
+									description: 'Block updaters sent by others (same hostname)'
 								}
 							},
 							personalization: {
@@ -202,6 +198,12 @@ module.exports = (() => {
 									value: 'https://{{link_hostname}}/attachments/{{link_id}}.{{link_extension}}',
 									description:
 										'View Status Updater message content'
+								},
+								useLabelsOnUpdaters: {
+									type: 'Switch',
+									value: true,
+									description:
+										'Use labels instead of ticks in Status Updater'
 								},
 								readStatusUpdaterLabel: {
 									type: 'TextInput',
@@ -440,7 +442,7 @@ module.exports = (() => {
 
 						if (APIUpdater.type === 'error')
 							return BdApi.showToast(
-								'Invalid asset provided. Please select a valid asset or a valid asset link (image/gif/video).',
+								'Invalid asset provided. Please select a valid asset or a valid asset link (image/gif).',
 								{
 									type: 'error'
 								}
@@ -718,11 +720,15 @@ module.exports = (() => {
 																`${updater.views}`
 														  ),
 													updater.views > 0,
-													cachedUpdaters.find(
-														(upd) =>
-															upd.id ===
-															message.id
-													)
+													this.settings
+														.personalization
+														.useLabelsOnUpdaters
+														? cachedUpdaters.find(
+																(upd) =>
+																	upd.id ===
+																	message.id
+														  )
+														: false
 												)
 											);
 									}
@@ -796,8 +802,8 @@ module.exports = (() => {
 												BDFDB.ReactUtils.createElement(
 													'svg',
 													{
-														width: '13',
-														height: '13',
+														width: '12',
+														height: '12',
 														viewBox: '0 0 24 24',
 														children:
 															BDFDB.ReactUtils.createElement(
@@ -830,8 +836,8 @@ module.exports = (() => {
 												BDFDB.ReactUtils.createElement(
 													'svg',
 													{
-														width: '10',
-														height: '10',
+														width: '12',
+														height: '12',
 														viewBox: '0 0 24 24',
 														children:
 															BDFDB.ReactUtils.createElement(
@@ -933,7 +939,7 @@ module.exports = (() => {
 																					LegacyText,
 																					{
 																						children:
-																							'Asset image/gif/video URL (or select one frome the list above)'
+																							'Asset image/gif URL (or select one from the list below)'
 																					}
 																				),
 																				BDFDB.ReactUtils.createElement(
@@ -1132,7 +1138,6 @@ module.exports = (() => {
 											CurrentUser.getCurrentUser().id
 									) {
 										message.embeds = [];
-										message.files = [];
 
 										BDFDB.ReactUtils.forceUpdate(
 											e.instance
