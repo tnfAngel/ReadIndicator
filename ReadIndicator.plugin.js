@@ -5,7 +5,7 @@
  * @authorId 456361646273593345
  * @description Shows a read tick when the destinatary read a message.
  * @invite 8RNAdpK
- * @version 1.0.8
+ * @version 1.0.9
  * @donate https://www.paypal.me/tnfAngelDev
  * @website https://github.com/Thread-Development/ReadIndicator/
  * @source https://github.com/Thread-Development/ReadIndicator/
@@ -31,11 +31,8 @@ module.exports = (() => {
 		},
 		changeLog: {
 			added: {
-				'New option':
-					'Now you can control if you warn to use labels instead of ticks in Status Updater'
-			},
-			fixed: {
-				'Video support': 'Not supported'
+				'Deprecated plugin':
+					'The plugin has been deprecated by the rejection on the official BetterDiscord plugin list. This plugin invades the privacy of other users so it is possibly a breach of the TOS, the use is not recommended but is at your own discretion. Automatic updates will no longer be provided.'
 			}
 		}
 	};
